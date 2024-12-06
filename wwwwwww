@@ -1,0 +1,62 @@
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Camera = workspace.CurrentCamera
+
+local following = false
+local targetPlayer
+
+-- Function to get the closest player to the mouse cursor within a specified distance
+local function getClosestPlayerToMouse()
+    local mouse = Players.LocalPlayer:GetMouse()
+    local closestPlayer = nil
+    local shortestDistance = math.huge
+    local maxDistance = 100  -- Max distance in studs
+
+    for _, player in pairs(Players:GetPlayers()) do
+        if player ~= Players.LocalPlayer and player.Character and player.Character:FindFirstChild("Head") then
+            local head = player.Character.Head
+            local screenPoint = Camera:WorldToScreenPoint(head.Position)
+            local distanceFromMouse = (Vector2.new(screenPoint.X, screenPoint.Y) - Vector2.new(mouse.X, mouse.Y)).magnitude
+            local distanceFromPlayer = (head.Position - Players.LocalPlayer.Character.Head.Position).magnitude
+            if distanceFromMouse < shortestDistance and distanceFromPlayer <= maxDistance then
+                closestPlayer = player
+                shortestDistance = distanceFromMouse
+            end
+        end
+    end
+
+    return closestPlayer
+end
+
+-- Function to follow the target player's head
+local function followHead()
+    if targetPlayer and targetPlayer.Character then
+        local head = targetPlayer.Character:FindFirstChild("Head")
+        if head then
+            Camera.CFrame = CFrame.new(Camera.CFrame.Position, head.Position)
+        end
+    end
+end
+
+-- Toggle following state when "E" is pressed
+UserInputService.InputBegan:Connect(function(input, gameProcessed)
+    if input.KeyCode == Enum.KeyCode.E and not gameProcessed then
+        following = not following
+        if following then
+            targetPlayer = getClosestPlayerToMouse()
+            if not targetPlayer then
+                following = false
+            end
+        else
+            Camera.CameraType = Enum.CameraType.Custom
+        end
+    end
+end)
+
+-- Update camera position if following
+RunService.RenderStepped:Connect(function()
+    if following then
+        followHead()
+    end
+end)
